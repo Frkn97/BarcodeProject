@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Barkod Okuyucu</title>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --card: #2a2a2a;
+      --highlight: #4caf50;
+      --warning: #ffeb3b;
+      --error: #f44336;
+      --text: #ffffff;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin: 0;
+    }
+
+    #cameraSelect {
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 14px;
+      background-color: var(--card);
+      color: var(--text);
+      border: 1px solid #555;
+    }
+
+    #videoContainer {
+      position: relative;
+      display: inline-block;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 3px solid #888;
+      background-color: var(--card);
+    }
+
+    video {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .highlight {
+      position: absolute;
+      top: 20%;
+      left: 10%;
+      width: 80%;
+      height: 60%;
+      border: 4px solid var(--highlight);
+      border-radius: 10px;
+      pointer-events: none;
+      display: none;
+    }
+
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      font-weight: bold;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .green { background-color: var(--highlight); color: white; }
+    .yellow { background-color: var(--warning); color: black; }
+    .red { background-color: var(--error); color: white; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 20px; }
+      #cameraSelect { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Barkod Okuyucu</h1>
+    <select id="cameraSelect"></select>
+  </header>
+
+  <div id="videoContainer">
+    <video id="video" autoplay muted playsinline></video>
+    <div id="highlight" class="highlight"></div>
+  </div>
+
+  <div id="status" class="status yellow">Kamera başlatılıyor...</div>
+
+  <script type="module">
+    import {
+      BrowserMultiFormatReader
+    } from 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.0.10/+esm';
+
+    const codeReader = new BrowserMultiFormatReader();
+    const videoElement = document.getElementById('video');
+    const statusDiv = document.getElementById('status');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const highlightBox = document.getElementById('highlight');
+
+    let currentDeviceId = null;
+
+    async function listCameras() {
+      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      cameraSelect.innerHTML = '';
+      devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Kamera ${cameraSelect.length + 1}`;
+        cameraSelect.appendChild(option);
+      });
+
+      if (devices.length > 0) {
+        currentDeviceId = devices[0].deviceId;
+        cameraSelect.value = currentDeviceId;
+        startCamera(currentDeviceId);
+      }
+    }
+
+    function startCamera(deviceId) {
+      codeReader.decodeFromVideoDevice(deviceId, videoElement, (result, error) => {
+        if (result) {
+          statusDiv.textContent = "🟢 Barkod Okundu: " + result.getText();
+          statusDiv.className = "status green";
+          highlightBox.style.display = "block";
+        } else {
+          statusDiv.textContent = "🟡 Okumaya çalışılıyor...";
+          statusDiv.className = "status yellow";
+          highlightBox.style.display = "none";
+        }
+      });
+    }
+
+    cameraSelect.addEventListener("change", () => {
+      currentDeviceId = cameraSelect.value;
+      startCamera(currentDeviceId);
+    });
+
+    listCameras();
+  </script>
+</body>
+</html>
